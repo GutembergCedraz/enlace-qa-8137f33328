@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+
+<title>Quadro de melhorias Rede Enlace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&family=Poppins:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Cores e fontes do site da Rede Enlace. Layout: cabeçalho com logo e ações; resumo de progresso; quadro em 3 colunas no estilo Jira; detalhes da tarefa em painel lateral. */
+  --bg: #faf6f8;
+  --surface: #ffffff;
+  --soft: #ffe5f1;
+  --line: #ede1e6;
+  --text: #210f1e;
+  --muted: #6e5d6b;
+  --brand: #e3006e;
+  --brand-deep: #650038;
+  --todo: #6e5d6b;
+  --doing: #1f6fd1;
+  --done: #00807f;
+  --blocked: #c40012;
+  --warn: #b77f00;
+  --font-display: "Nunito", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Poppins", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 14px; line-height: 1.55; }
+a { color: var(--brand); }
+:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
+.wrap { max-width: 1280px; margin: 0 auto; padding: 0 20px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+button { font: inherit; }
+
+/* Cabeçalho */
+.top { background: var(--surface); border-bottom: 1px solid var(--line); }
+.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; }
+.brand { display: flex; align-items: center; gap: 14px; }
+.brand img { height: 42px; width: auto; display: block; }
+.brand .bt { border-left: 1px solid var(--line); padding-left: 14px; display: grid; line-height: 1.25; }
+.brand h1 { font-size: 1.05rem; font-weight: 800; color: var(--brand-deep); }
+.brand small { font-size: .74rem; color: var(--muted); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 9px; padding: 7px 12px; cursor: pointer; font-size: .84rem; font-weight: 500; }
+.btn:hover { border-color: var(--brand); color: var(--brand); }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.btn.primary:hover { background: #c8005f; color: #fff; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.small { padding: 4px 9px; font-size: .78rem; }
+
+/* Resumo */
+.summary { display: grid; grid-template-columns: 1.4fr repeat(4, minmax(0, 1fr)); gap: 12px; margin: 20px 0 16px; }
+.sbox { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.sbox .n { font-family: var(--font-display); font-weight: 800; font-size: 1.7rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.sbox .l { font-size: .8rem; color: var(--muted); }
+.prog h2 { font-size: 1.05rem; font-weight: 800; }
+.bar { height: 10px; background: #f1e6ec; border-radius: 10px; overflow: hidden; display: flex; margin: 10px 0 6px; }
+.bar i { display: block; height: 100%; }
+.bar .d { background: var(--done); }
+.bar .p { background: var(--doing); }
+.prog .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: .76rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.n.todo { color: var(--todo); } .n.doing { color: var(--doing); } .n.done { color: var(--done); } .n.blocked { color: var(--blocked); }
+.fases { display: grid; gap: 6px; margin-top: 10px; }
+.fase-row { display: grid; grid-template-columns: 62px 1fr 44px; gap: 8px; align-items: center; font-size: .76rem; color: var(--muted); }
+.fase-row .bar { margin: 0; height: 6px; }
+
+/* Barra de ferramentas */
+.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.views { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.views button { border: 0; background: none; padding: 6px 12px; border-radius: 8px; color: var(--muted); cursor: pointer; font-size: .84rem; font-weight: 500; }
+.views button[aria-pressed="true"] { background: var(--brand); color: #fff; }
+.toolbar select, .toolbar input[type=search] { font: inherit; font-size: .84rem; border: 1px solid var(--line); background: var(--surface); color: var(--text); border-radius: 9px; padding: 7px 10px; }
+.toolbar input[type=search] { flex: 1 1 200px; }
+.toolbar label.chk { display: inline-flex; gap: 6px; align-items: center; font-size: .84rem; color: var(--muted); cursor: pointer; }
+.toolbar label.chk input { accent-color: var(--brand); }
+
+/* Quadro */
+.board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.col { background: #f3edf1; border-radius: 14px; padding: 10px; min-height: 200px; }
+.col.over { outline: 2px dashed var(--brand); outline-offset: -4px; background: var(--soft); }
+.col-head { display: flex; justify-content: space-between; align-items: center; padding: 4px 6px 10px; }
+.col-head h3 { font-size: .8rem; font-family: var(--font-body); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.col-head h3 i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.col-head .cnt { font-size: .78rem; color: var(--muted); background: var(--surface); border-radius: 999px; padding: 1px 9px; font-variant-numeric: tabular-nums; }
+.cards { display: grid; gap: 8px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; display: grid; gap: 7px; cursor: grab; }
+.card:hover { border-color: #f0b3d0; }
+.card.dragging { opacity: .5; }
+.card.is-blocked { border-left: 4px solid var(--blocked); }
+.card.is-ready { border-left: 4px solid var(--done); }
+.card .row1 { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.key { font-family: var(--font-mono); font-size: .76rem; color: var(--brand); text-decoration: none; background: none; border: 0; padding: 0; cursor: pointer; }
+.key small { color: var(--muted); margin-left: 4px; }
+.prio { font-size: .72rem; display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
+.prio b { font-size: .8rem; }
+.prio.alta b { color: var(--blocked); } .prio.media b { color: var(--warn); } .prio.baixa b { color: var(--doing); }
+.card .title { font-weight: 600; font-size: .9rem; line-height: 1.4; background: none; border: 0; padding: 0; text-align: left; color: var(--text); cursor: pointer; }
+.card .title:hover { color: var(--brand); }
+.chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.chip { font-size: .7rem; border-radius: 6px; padding: 1px 7px; background: #f3edf1; color: var(--muted); }
+.chip.epic { background: var(--soft); color: var(--brand-deep); font-weight: 500; }
+.dep { font-size: .76rem; border-radius: 8px; padding: 6px 8px; display: grid; gap: 2px; }
+.dep.blk { background: #fff0f2; color: #8f0020; }
+.dep.ok { background: #e6f6f5; color: #00514f; }
+.dep.warn { background: #fff7e3; color: #6b4b00; }
+.dep .lnk { font-family: var(--font-mono); font-size: .74rem; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+.bloqueia { font-size: .74rem; color: var(--muted); }
+.card .foot { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+.who { display: inline-flex; align-items: center; gap: 6px; font-size: .74rem; color: var(--muted); }
+.avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--brand-deep); color: #fff; font-size: .66rem; display: grid; place-items: center; font-weight: 600; }
+.avatar.none { background: #e9dfe5; color: var(--muted); }
+.card .btns { display: flex; gap: 6px; }
+.empty { font-size: .8rem; color: var(--muted); text-align: center; padding: 18px 6px; border: 1px dashed var(--line); border-radius: 10px; }
+
+/* Ordem de execução */
+.waves { display: grid; gap: 14px; }
+.wave { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.wave h3 { font-size: 1rem; font-weight: 800; }
+.wave p { margin: 2px 0 10px; color: var(--muted); font-size: .84rem; }
+.wave ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.wave li { display: grid; grid-template-columns: 110px 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; background: var(--bg); }
+.wave li .after { font-size: .74rem; color: var(--muted); display: block; }
+.st { font-size: .72rem; font-weight: 600; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+.st.todo { background: #efe8ec; color: var(--todo); }
+.st.doing { background: #e3eefc; color: var(--doing); }
+.st.done { background: #e0f4f3; color: var(--done); }
+.st.blocked { background: #ffe8eb; color: var(--blocked); }
+
+/* Painel de detalhes */
+dialog { border: 0; padding: 0; border-radius: 16px; width: min(640px, 94vw); max-height: 90vh; box-shadow: 0 20px 60px rgba(101,0,56,.25); color: var(--text); }
+dialog::backdrop { background: rgba(33,15,30,.45); }
+.dlg { display: grid; gap: 14px; padding: 20px 22px; overflow: auto; max-height: 90vh; }
+.dlg-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.dlg-head h2 { font-size: 1.25rem; font-weight: 800; line-height: 1.3; }
+.dlg .meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.dlg label { font-size: .76rem; color: var(--muted); display: grid; gap: 4px; }
+.dlg select, .dlg input { font: inherit; font-size: .88rem; border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; color: var(--text); background: #fff; }
+.dlg .sec h4 { font-family: var(--font-body); font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; color: var(--brand-deep); margin-bottom: 3px; }
+.dlg .sec p { margin: 0; font-size: .88rem; }
+.dlg .hist { font-size: .78rem; color: var(--muted); margin: 0; padding-left: 18px; }
+.msg { font-size: .8rem; color: var(--blocked); min-height: 0; margin: 0; }
+.msg:empty { display: none; }
+
+/* Aviso */
+.toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(20px); background: var(--text); color: #fff; padding: 10px 16px; border-radius: 10px; font-size: .86rem; box-shadow: 0 10px 30px rgba(0,0,0,.2); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; max-width: 92vw; z-index: 50; }
+.toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.help { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin: 18px 0 30px; font-size: .84rem; }
+.help summary { cursor: pointer; color: var(--brand); font-weight: 500; }
+.help ol { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 4px; }
+footer { border-top: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: .8rem; padding: 16px 0 30px; }
+
+@media (max-width: 1000px) { .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .summary .prog { grid-column: 1 / -1; } }
+@media (max-width: 820px) { .board { grid-template-columns: 1fr; } .brand .bt { display: none; } .wave li { grid-template-columns: 1fr; } .dlg .meta { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <img src="data:image/png;base64,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" alt="Rede Enlace: acolher, capacitar e conectar" width="102" height="42">
+      <div class="bt"><h1>Quadro de melhorias</h1><small>vagas.redeenlace.com.br · projeto ENL</small></div>
+    </div>
+    <div class="actions">
+      <a class="btn" href="plano.html" style="text-decoration:none">Ver plano de melhorias</a>
+      <button class="btn primary" id="btn-csv" type="button">Exportar CSV para o Jira</button>
+      <button class="btn" id="btn-save" type="button">Salvar status (.json)</button>
+      <button class="btn" id="btn-load" type="button">Carregar status</button>
+      <input type="file" id="file-load" accept="application/json,.json" class="sr" tabindex="-1">
+      <button class="btn" id="btn-reset" type="button">Zerar</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="summary" aria-label="Resumo do andamento">
+    <div class="sbox prog">
+      <h2 id="prog-t">0 de 25 feitas</h2>
+      <div class="bar" aria-hidden="true"><i class="d" id="bar-d"></i><i class="p" id="bar-p"></i></div>
+      <div class="legend"><span><i style="background:var(--done)"></i>Feita</span><span><i style="background:var(--doing)"></i>Em andamento</span><span><i style="background:#f1e6ec"></i>A fazer</span></div>
+      <div class="fases" id="fases"></div>
+    </div>
+    <div class="sbox"><div class="n todo" id="n-todo">0</div><div class="l">A fazer</div></div>
+    <div class="sbox"><div class="n doing" id="n-doing">0</div><div class="l">Em andamento</div></div>
+    <div class="sbox"><div class="n done" id="n-done">0</div><div class="l">Feitas</div></div>
+    <div class="sbox"><div class="n blocked" id="n-blocked">0</div><div class="l">Bloqueadas por dependência</div></div>
+  </section>
+
+  <div class="toolbar">
+    <div class="views" role="group" aria-label="Visualização">
+      <button type="button" id="view-board" aria-pressed="true">Quadro</button>
+      <button type="button" id="view-order" aria-pressed="false">Ordem de execução</button>
+    </div>
+    <label for="f-fase" class="sr">Fase</label>
+    <select id="f-fase"><option value="">Todas as fases</option><option value="1">Fase 1 · Ganhos rápidos</option><option value="2">Fase 2 · Estrutura</option><option value="3">Fase 3 · Acabamento</option></select>
+    <label for="f-area" class="sr">Área</label>
+    <select id="f-area"><option value="">Todas as áreas</option></select>
+    <label for="f-q" class="sr">Buscar</label>
+    <input type="search" id="f-q" placeholder="Buscar: ENL-4, CEP, senha…" autocomplete="off">
+    <label class="chk" for="f-ready"><input type="checkbox" id="f-ready"> Só o que posso iniciar agora</label>
+  </div>
+
+  <section id="board-view" aria-label="Quadro">
+    <div class="board" id="board"></div>
+  </section>
+
+  <section id="order-view" aria-label="Ordem de execução" hidden>
+    <div class="waves" id="waves"></div>
+  </section>
+
+  <details class="help">
+    <summary>Como usar e como levar para o Jira</summary>
+    <ol>
+      <li>Use <b>Iniciar</b>, <b>Concluir</b> e <b>Reabrir</b> nos cartões, ou arraste o cartão entre as colunas.</li>
+      <li>Tarefa com faixa vermelha está <b>bloqueada</b>: ela só pode ser iniciada quando todas as tarefas de que depende estiverem como <b>Feita</b>. Faixa verde indica que já pode começar.</li>
+      <li>O status fica salvo <b>neste navegador</b>. Para passar para outra pessoa, use <b>Salvar status (.json)</b> e ela usa <b>Carregar status</b>.</li>
+      <li>Para importar no Jira: <b>Exportar CSV para o Jira</b> → no Jira, <i>Configurações do sistema → Importação externa do sistema → CSV</i>. Mapeie <i>Issue Id</i>, <i>Summary</i>, <i>Issue Type</i>, <i>Status</i>, <i>Priority</i>, <i>Labels</i>, <i>Description</i> e <i>Parent</i>; as colunas <i>Blocked by</i> viram o vínculo “is blocked by”. Os status do arquivo são To Do, In Progress e Done.</li>
+    </ol>
+  </details>
+</main>
+
+<footer><div class="wrap">Documento de QA preparado por Gutemberg Cedraz a partir do relatório de segurança e usabilidade de 17/11/2026. Chave ENL-n corresponde à melhoria M-n do plano.</div></footer>
+
+<dialog id="dlg" aria-labelledby="dlg-title">
+  <div class="dlg" id="dlg-body"></div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var ITEMS = [
+    { id:"M-01", area:"Formulários", esforco:"Rápido", impacto:"Alto", fase:1,
+      titulo:"Máscara e teclado numérico em CNPJ, WhatsApp e CEP",
+      onde:"Cadastro de empresa, onboarding, configurações, cadastro de candidato",
+      hoje:"Os campos aceitam letras e não formatam o valor. O exemplo mostra “(11) 99999-0000”, mas o que se digita fica “11987654321”. Só o formulário de candidatura já faz certo.",
+      proposta:"Usar em todos os formulários o mesmo componente da candidatura: teclado numérico no celular, máscara enquanto digita e corte do excesso.",
+      dev:"inputmode=\"numeric\"; autocomplete=\"tel-national\" no WhatsApp e \"postal-code\" no CEP. Gravar só dígitos no banco e formatar na tela.",
+      aceite:"Dado o cadastro de empresa no celular, quando toco no WhatsApp, então abre o teclado numérico; ao digitar 11987654321 o campo mostra (11) 98765-4321 e não aceita um 12º dígito.",
+      refs:"U-05 · U-23 · F-18", proto:"P1" },
+    { id:"M-02", area:"Formulários", esforco:"Médio", impacto:"Alto", fase:2,
+      titulo:"CEP que preenche cidade, bairro e Estado",
+      onde:"Candidatura, cadastro do candidato, configurações da empresa, nova vaga",
+      hoje:"Cidade e bairro são digitados à mão. Isso gera erros como vaga de Osasco cadastrada com cidade “São Paulo”.",
+      proposta:"Ao completar os 8 dígitos do CEP, buscar o endereço e preencher cidade, bairro e Estado, deixando tudo editável.",
+      dev:"Consultar ViaCEP ou BrasilAPI por uma rota do próprio servidor (ex.: /api/cep/[cep]) com cache. Se falhar, liberar o preenchimento manual.",
+      aceite:"Dado o CEP 01310-100, quando termino de digitar, então aparecem cidade “São Paulo”, Estado “SP” e bairro “Bela Vista”, todos editáveis.",
+      refs:"Nova · U-18", proto:"P2" },
+    { id:"M-03", area:"Formulários", esforco:"Rápido", impacto:"Alto", fase:1,
+      titulo:"Erros todos de uma vez, ao lado do campo, e que somem ao corrigir",
+      onde:"Cadastro de empresa, nova vaga, candidatura",
+      hoje:"No cadastro de empresa, o 1º clique mostra só o balão do e-mail. Na nova vaga, “Selecione uma area” aparece só num aviso flutuante. Na candidatura, o erro continua vermelho depois de corrigido.",
+      proposta:"Validar tudo no envio, mostrar cada erro embaixo do campo, levar o foco ao primeiro erro e revalidar enquanto a pessoa digita.",
+      dev:"noValidate no <form> para não misturar balões nativos; react-hook-form com mode \"onTouched\" e reValidateMode \"onChange\"; aviso flutuante só para erro do servidor.",
+      aceite:"Dado o formulário vazio, quando clico em Cadastre-se, então todos os campos obrigatórios mostram erro ao mesmo tempo; quando corrijo um deles, então o erro some sem novo clique.",
+      refs:"U-06 · U-13 · U-25", proto:"P1" },
+    { id:"M-04", area:"Formulários", esforco:"Médio", impacto:"Alto", fase:2,
+      titulo:"Uma regra de validação por dado, igual no navegador e no servidor",
+      onde:"Todos os formulários",
+      hoje:"WhatsApp vale com 10 a 13 dígitos na empresa, “pelo menos 10” no candidato e exatamente 11 na candidatura. CNPJ alfanumérico passa no cadastro e falha no perfil. Salário mínimo de R$ 3.000 com máximo de R$ 1.000 foi salvo.",
+      proposta:"Centralizar as regras num pacote de validação compartilhado e usá-lo nos formulários e no servidor.",
+      dev:"lib/validation com whatsappBR (11 dígitos, 3º dígito 9), cnpj (alfanumérico com DV), cep (8 dígitos) e salaryRange (mín ≤ máx). Reaproveitar o mesmo schema zod nas Server Actions.",
+      aceite:"Dado salário mínimo 3000 e máximo 1000, quando salvo o rascunho, então aparece “O mínimo não pode ser maior que o máximo” e nada é gravado.",
+      refs:"U-12 · U-23 · F-18 · F-19", proto:"P3" },
+    { id:"M-05", area:"Formulários", esforco:"Médio", impacto:"Alto", fase:2,
+      titulo:"Listas em vez de texto livre para Estado, Cidade e Setor",
+      onde:"Onboarding da empresa, configurações, cadastro do candidato",
+      hoje:"Estado é texto de 2 letras no onboarding e lista na vaga. Setor é lista no onboarding e texto em Configurações, e o setor escolhido no onboarding não foi salvo. A cidade do candidato é texto livre, sem Estado.",
+      proposta:"Usar sempre Estado em lista e Cidade em lista dependente do Estado (base do IBGE). Setor sempre como lista.",
+      dev:"Municípios do IBGE em JSON estático ou tabela no banco; gravar o código IBGE da cidade além do nome.",
+      aceite:"Dado o perfil da empresa, quando abro Configurações, então Setor mostra numa lista o mesmo valor escolhido no onboarding.",
+      refs:"U-09 · U-16 · U-18 · U-25", proto:"P2" },
+    { id:"M-06", area:"Formulários", esforco:"Médio", impacto:"Médio", fase:3,
+      titulo:"Não pedir o mesmo dado duas vezes",
+      onde:"Onboarding da empresa, candidatura",
+      hoje:"O onboarding da empresa repete CNPJ, e-mail e WhatsApp. A candidatura pede de novo WhatsApp, cidade e tempo de experiência já dados no perfil.",
+      proposta:"Pré-preencher o que já se sabe e mostrar “Usamos os dados do seu perfil. Revise se precisar.”",
+      dev:"Carregar candidate_profiles no início da candidatura e usar como defaultValues; aparar espaços (o nome veio como “teste ”).",
+      aceite:"Dado um candidato com perfil completo, quando abro a candidatura, então nome, WhatsApp, cidade e experiência já vêm preenchidos.",
+      refs:"U-09 · U-24 · U-25" },
+    { id:"M-07", area:"Formulários", esforco:"Rápido", impacto:"Médio", fase:1,
+      titulo:"Lista de funções organizada, com busca",
+      onde:"Candidatura, etapa 2",
+      hoje:"33 funções numa só lista, sem ordem, misturando costura, loja e escritório, com grafias como “Auxiliar de Producao” e “Embalagem e Expedição.”.",
+      proposta:"Agrupar por área, ordenar, permitir busca e abrir primeiro o grupo da área da vaga.",
+      dev:"job_functions já tem area e sort_order: agrupar no cliente por area e corrigir os nomes na tabela.",
+      aceite:"Dado a etapa 2 da candidatura, quando digito “cort”, então aparecem só Cortador(a) e Auxiliar de Corte.",
+      refs:"U-24", proto:"P4" },
+    { id:"M-08", area:"Formulários", esforco:"Rápido", impacto:"Alto", fase:1,
+      titulo:"Campos de senha mais seguros e fáceis de usar",
+      onde:"Login, cadastros, Minha conta",
+      hoje:"Mínimo de 6 caracteres (12345678 foi aceita), sem botão de mostrar senha, sem autocomplete no login e no cadastro, formulário enviado por GET.",
+      proposta:"Mínimo de 8, indicador de força, bloqueio de senhas vazadas, botão mostrar/ocultar e envio por POST.",
+      dev:"minLength 8 no zod e no Supabase Auth; ligar Leaked password protection; autocomplete current-password / new-password; method=\"post\".",
+      aceite:"Dado o cadastro, quando digito 12345678, então aparece “Senha muito comum, escolha outra” e o cadastro não é enviado.",
+      refs:"F-04 · F-05 · U-10", proto:"P1" },
+    { id:"M-09", area:"Formulários", esforco:"Rápido", impacto:"Médio", fase:1,
+      titulo:"Cadastro com nome da empresa e aceite dos termos",
+      onde:"Cadastro de empresa e de candidato",
+      hoje:"O cadastro de empresa não pede o nome da empresa (só no passo seguinte) e nenhum cadastro tem aceite de Termos e Política de Privacidade.",
+      proposta:"Pedir o nome da empresa no cadastro e incluir caixa de aceite, desmarcada, com links para Termos e Privacidade.",
+      dev:"Gravar data e versão dos termos aceitos (consent_at, terms_version).",
+      aceite:"Dado o cadastro sem aceite marcado, quando envio, então aparece “Aceite os Termos de Uso para continuar”.",
+      refs:"U-10", proto:"P1" },
+    { id:"M-10", area:"Formulários", esforco:"Rápido", impacto:"Médio", fase:1,
+      titulo:"Padrões mais justos na nova vaga",
+      onde:"Painel da empresa, Nova Vaga",
+      hoje:"A nova vaga já vem com “Currículo obrigatório” e “Vaga sigilosa” ligados.",
+      proposta:"Deixar os dois desligados, ou explicar o efeito ao lado (“Exigir currículo reduz o número de candidaturas”).",
+      dev:"Alterar defaultValues e medir candidaturas por vaga antes e depois.",
+      aceite:"Dado “Criar Nova Vaga”, quando a tela abre, então os dois interruptores estão desligados ou com o texto de impacto visível.",
+      refs:"U-14" },
+    { id:"M-11", area:"Busca e filtros", esforco:"Médio", impacto:"Alto", fase:2,
+      titulo:"Busca que entende acento, gênero e sinônimos",
+      onde:"Lista de vagas",
+      hoje:"“maquina” traz 1 vaga e “máquina” traz 5. “costureiro” traz 0, com 7 vagas de Costureira no ar. “overlock” traz 0 e “overloque” traz 4.",
+      proposta:"Ignorar acentos e maiúsculas, procurar pelo radical e ter um dicionário de sinônimos do setor.",
+      dev:"Postgres com unaccent e pg_trgm, ou busca textual com dicionário portuguese; tabela de sinônimos (overlock → overloque, costureiro → costureira).",
+      aceite:"Dado vagas de “Costureira”, quando busco “costureiro” ou “COSTUREIRA”, então as mesmas vagas aparecem.",
+      refs:"U-02 · U-03" },
+    { id:"M-12", area:"Busca e filtros", esforco:"Rápido", impacto:"Baixo", fase:1,
+      titulo:"Tratar “%” e “_” como texto na busca",
+      onde:"Lista de vagas",
+      hoje:"Buscar “%” devolve todas as 18 vagas.",
+      proposta:"Tratar esses caracteres como texto comum.",
+      dev:"Escapar % e _ antes do ilike, ou resolver junto com a busca textual da M-11.",
+      aceite:"Dado a busca “%”, então aparece “Nenhuma vaga encontrada”.",
+      refs:"U-04" },
+    { id:"M-13", area:"Busca e filtros", esforco:"Rápido", impacto:"Médio", fase:1,
+      titulo:"Filtros que mostram contagem e não pulam a página",
+      onde:"Lista de vagas",
+      hoje:"As etiquetas de área não mostram quantas vagas têm e levam a resultado vazio. Cada filtro volta a página ao topo. No celular, o resultado fica abaixo do destaque.",
+      proposta:"Mostrar a contagem em cada área (como já acontece em Estado e Cidade), esconder áreas sem vagas e manter a posição da página.",
+      dev:"router.replace(url, { scroll: false }); depois de buscar no celular, rolar até #vagas.",
+      aceite:"Dado o filtro SP, quando toco numa área, então a página fica na mesma posição e a área mostra a contagem “(n)”.",
+      refs:"U-08 · U-18" },
+    { id:"M-14", area:"Busca e filtros", esforco:"Rápido", impacto:"Médio", fase:1,
+      titulo:"Tela “nenhuma vaga” com sugestões",
+      onde:"Lista de vagas",
+      hoje:"A tela só pede para ajustar os filtros.",
+      proposta:"Sugerir termos próximos (“Você quis dizer costureira?”), botão para limpar a busca e vagas parecidas.",
+      dev:"Usar a similaridade do pg_trgm da M-11 para sugerir até 3 termos.",
+      aceite:"Dado uma busca sem resultado, então aparecem até 3 sugestões clicáveis.",
+      refs:"U-03" },
+    { id:"M-15", area:"Navegação", esforco:"Médio", impacto:"Alto", fase:2,
+      titulo:"Menu no celular para o painel da empresa",
+      onde:"Todo o painel /company",
+      hoje:"Em telas de 354 a 375 px não há menu, “Sair”, Configurações, Equipe nem Ajuda. No computador o menu lateral aparece.",
+      proposta:"Barra inferior com Início, Vagas, Candidatos e Mais; o “Mais” abre o resto, com Sair no fim.",
+      dev:"Reaproveitar os itens do menu lateral numa barra inferior exibida abaixo do breakpoint md; testar em 360 px.",
+      aceite:"Dado o painel no celular, quando procuro sair, então encontro “Sair” em no máximo 2 toques.",
+      refs:"U-01 · U-21", proto:"P5" },
+    { id:"M-16", area:"Navegação", esforco:"Rápido", impacto:"Médio", fase:1,
+      titulo:"Sem becos sem saída no painel",
+      onde:"Dashboard, Métricas, Ajuda, Uso do plano",
+      hoje:"O dashboard manda para Métricas, que é bloqueada no plano grátis. “Fale com a Rede Enlace”, a Ajuda e o Uso do plano não têm contato clicável.",
+      proposta:"Sinalizar recursos bloqueados antes do clique (cadeado e explicação) e usar contato real (WhatsApp ou e-mail clicável).",
+      dev:"Flag por plano no item de menu; link wa.me e mailto: com o endereço também visível em texto.",
+      aceite:"Dado o plano grátis, então o link Métricas mostra cadeado e o botão de contato abre o WhatsApp ou o e-mail.",
+      refs:"U-15" },
+    { id:"M-17", area:"Navegação", esforco:"Médio", impacto:"Baixo", fase:3,
+      titulo:"Tabela de vagas responsiva",
+      onde:"Painel, Gerenciar Vagas",
+      hoje:"Em 1024 px a lista de vagas rola de lado e corta as ações.",
+      proposta:"Virar cartões em telas menores, com as ações principais sempre visíveis.",
+      dev:"Tabela acima de lg e cartões abaixo, a partir do mesmo dado.",
+      aceite:"Dado a tela de 1024 px, então todas as ações da vaga aparecem sem rolagem lateral.",
+      refs:"U-20" },
+    { id:"M-18", area:"Navegação", esforco:"Rápido", impacto:"Baixo", fase:1,
+      titulo:"Menu público de acordo com quem está logado",
+      onde:"Cabeçalho da área pública",
+      hoje:"Empresa logada vê “Para empresas”, que leva ao cadastro.",
+      proposta:"Trocar por “Meu painel” e esconder os links de cadastro para quem já tem conta.",
+      dev:"Condicionar os itens ao papel da sessão.",
+      aceite:"Dado uma empresa logada, quando abro o menu público, então não aparece link de cadastro.",
+      refs:"U-21" },
+    { id:"M-19", area:"Navegação", esforco:"Médio", impacto:"Médio", fase:2,
+      titulo:"Opção de excluir a conta",
+      onde:"Minha conta (empresa e candidato)",
+      hoje:"Não existe opção de excluir a conta (direito de eliminação, LGPD art. 18).",
+      proposta:"Botão “Excluir minha conta” com confirmação e explicação do que é apagado e do que fica guardado por obrigação legal.",
+      dev:"Fluxo com confirmação por e-mail; exclusão em cascata no banco e no Storage (currículo, logo).",
+      aceite:"Dado uma conta de candidato, quando confirmo a exclusão, então não consigo mais entrar e o currículo não é mais acessível.",
+      refs:"U-17" },
+    { id:"M-20", area:"Navegação", esforco:"Rápido", impacto:"Médio", fase:1,
+      titulo:"Uma regra só para “perfil completo”",
+      onde:"Candidato: cadastro complementar, candidatura, painel",
+      hoje:"O site diz que é preciso completar o perfil para se candidatar, mas a candidatura funciona sem ele. O painel do candidato fica bloqueado até completar.",
+      proposta:"Decidir a regra (sugestão: permitir candidatar sem perfil completo, que tem menos atrito) e ajustar textos e bloqueios.",
+      dev:"Centralizar a checagem num helper usado pelo middleware e pela candidatura.",
+      aceite:"Dado um candidato sem perfil completo, então o texto da tela e o comportamento da candidatura dizem a mesma coisa.",
+      refs:"U-22" },
+    { id:"M-21", area:"Conteúdo e textos", esforco:"Rápido", impacto:"Médio", fase:1,
+      titulo:"Revisão de textos, acentos e idiomas",
+      onde:"Todo o site",
+      hoje:"“As senhas nao coincidem”, “E-mail invalido”, “Informacoes Basicas”, “Politica”, botão “Close” em inglês e o mesmo título em todas as abas do painel.",
+      proposta:"Revisar todas as mensagens em português e dar título próprio a cada página.",
+      dev:"Varrer o catálogo de traduções por palavras sem acento; generateMetadata por rota.",
+      aceite:"Dado qualquer página do painel, então a aba do navegador mostra o nome da página (ex.: “Candidatos · Rede Enlace”).",
+      refs:"U-11 · U-19" },
+    { id:"M-22", area:"Conteúdo e textos", esforco:"Rápido", impacto:"Médio", fase:1,
+      titulo:"Vagas vencidas saem do ar sozinhas",
+      onde:"Lista e detalhe de vagas",
+      hoje:"Uma vaga com expiração em 20/09/2026 seguia no ar e aceitando candidaturas em 17/11/2026.",
+      proposta:"Esconder a vaga e bloquear candidatura depois do vencimento; avisar a empresa 3 dias antes.",
+      dev:"Filtro expires_at > now() na consulta pública e job diário (pg_cron) mudando o status para expired.",
+      aceite:"Dado uma vaga vencida ontem, então ela não aparece na lista e o link direto mostra “Vaga encerrada”.",
+      refs:"F-10" },
+    { id:"M-23", area:"Acessibilidade", esforco:"Rápido", impacto:"Médio", fase:1,
+      titulo:"Erros que o leitor de tela anuncia",
+      onde:"Todos os formulários",
+      hoje:"Os erros não estão ligados aos campos (faltam aria-invalid, aria-describedby e role=\"alert\") e a página não declara o idioma.",
+      proposta:"Ligar cada erro ao seu campo e declarar lang=\"pt-BR\".",
+      dev:"<input aria-invalid=\"true\" aria-describedby=\"cnpj-erro\"> com <p id=\"cnpj-erro\" role=\"alert\">; <html lang=\"pt-BR\">.",
+      aceite:"Dado um leitor de tela (NVDA ou TalkBack), quando envio com erro, então o erro do campo é lido em voz alta.",
+      refs:"U-07", proto:"P1" },
+    { id:"M-24", area:"Segurança no preenchimento", esforco:"Rápido", impacto:"Alto", fase:1,
+      titulo:"Confirmar o e-mail no cadastro",
+      onde:"Cadastro de empresa e de candidato",
+      hoje:"As contas de teste de empresa e de candidato foram confirmadas no mesmo instante, sem link.",
+      proposta:"Ativar a confirmação de e-mail e mostrar a tela “Confirme seu e-mail”, com opção de reenviar.",
+      dev:"Supabase Auth: ligar Confirm email; liberar publicação de vagas só após confirmar.",
+      aceite:"Dado um cadastro novo, quando entro sem confirmar o e-mail, então vejo “Confirme seu e-mail” e não consigo publicar vaga.",
+      refs:"F-14" },
+    { id:"M-25", area:"Segurança no preenchimento", esforco:"Médio", impacto:"Alto", fase:2,
+      titulo:"Uploads seguros de logo e currículo",
+      onde:"Configurações da empresa, cadastro do candidato, candidatura",
+      hoje:"O logo aceita SVG. O currículo aceita DOC e DOCX sem sinal de antivírus antes de chegar às empresas.",
+      proposta:"Logo só em JPG, PNG ou WebP. Currículo passa por antivírus, vira PDF e é baixado por link temporário.",
+      dev:"Checar a assinatura real do arquivo no servidor; antivírus (ex.: ClamAV); URL assinada de curta duração no Storage.",
+      aceite:"Dado um arquivo .svg, quando tento enviar como logo, então aparece “Use JPG, PNG ou WebP” e nada é salvo.",
+      refs:"F-20 · F-23" }
+  ];
+
+  /* Dependências: a tarefa só pode ser iniciada quando estas estiverem feitas */
+  var DEPS = {
+    "M-04": ["M-01", "M-03"],
+    "M-02": ["M-01", "M-05"],
+    "M-06": ["M-05", "M-20"],
+    "M-09": ["M-03"],
+    "M-14": ["M-11"],
+    "M-15": ["M-16", "M-18"],
+    "M-17": ["M-15"],
+    "M-19": ["M-24"],
+    "M-23": ["M-03"]
+  };
+  ITEMS.forEach(function (i) { if (i.id === "M-14") i.fase = 2; });
+
+  var FASES = { 1: "Fase 1 · Ganhos rápidos", 2: "Fase 2 · Estrutura", 3: "Fase 3 · Acabamento" };
+  var COLS = [["todo", "A fazer", "var(--todo)"], ["doing", "Em andamento", "var(--doing)"], ["done", "Feita", "var(--done)"]];
+  var LABEL = { todo: "A fazer", doing: "Em andamento", done: "Feita" };
+  var JIRA_STATUS = { todo: "To Do", doing: "In Progress", done: "Done" };
+  var STORE = "enlace-quadro-melhorias-v1";
+  var BY = {}; ITEMS.forEach(function (i) { BY[i.id] = i; });
+
+  function key(id) { return "ENL-" + Number(id.slice(2)); }
+  function idFromKey(k) { var n = Number(String(k).replace(/\D/g, "")); return "M-" + (n < 10 ? "0" + n : String(n)); }
+  function prio(i) { return i.impacto === "Alto" ? ["alta", "▲", "Alta"] : (i.impacto === "Médio" ? ["media", "■", "Média"] : ["baixa", "▼", "Baixa"]); }
+  function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  function norm(s) { return String(s).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(); }
+  function initials(n) { return String(n).trim().split(/\s+/).slice(0, 2).map(function (p) { return p[0]; }).join("").toUpperCase(); }
+  function now() { return new Date().toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
+
+  /* ---------- Estado ---------- */
+  function fresh() { var s = { status: {}, hist: {} }; ITEMS.forEach(function (i) { s.status[i.id] = "todo"; s.hist[i.id] = []; }); return s; }
+  var S = fresh();
+  try { var raw = localStorage.getItem(STORE); if (raw) { var p = JSON.parse(raw); if (p && p.status) { ITEMS.forEach(function (i) { if (p.status[i.id]) S.status[i.id] = p.status[i.id]; if (p.hist && p.hist[i.id]) S.hist[i.id] = p.hist[i.id]; }); } } } catch (e) {}
+  function save() { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {} }
+
+  function blockers(id) { return DEPS[id] || []; }
+  function dependents(id) { return Object.keys(DEPS).filter(function (k) { return DEPS[k].indexOf(id) !== -1; }); }
+  function pendingBlockers(id) { return blockers(id).filter(function (b) { return S.status[b] !== "done"; }); }
+  function isBlocked(id) { return pendingBlockers(id).length > 0; }
+
+  var WAVE = {};
+  function wave(id) { if (WAVE[id]) return WAVE[id]; var w = 1; blockers(id).forEach(function (b) { w = Math.max(w, wave(b) + 1); }); WAVE[id] = w; return w; }
+  ITEMS.forEach(function (i) { wave(i.id); });
+
+  /* ---------- Aviso ---------- */
+  var toastEl = document.getElementById("toast"), toastT;
+  function toast(m) { toastEl.textContent = m; toastEl.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(function () { toastEl.classList.remove("on"); }, 3800); }
+
+  /* ---------- Mudar status ---------- */
+  function move(id, to) {
+    var from = S.status[id];
+    if (from === to) return true;
+    if (to !== "todo" && isBlocked(id)) {
+      var pb = pendingBlockers(id).map(function (b) { return key(b) + " (" + LABEL[S.status[b]].toLowerCase() + ")"; });
+      toast(key(id) + " está bloqueada. Conclua antes: " + pb.join(", ") + ".");
+      return false;
+    }
+    S.status[id] = to;
+    S.hist[id] = (S.hist[id] || []).concat([{ s: to, t: now() }]);
+    save();
+    if (from === "done") {
+      var afetadas = dependents(id).filter(function (d) { return S.status[d] !== "todo"; });
+      if (afetadas.length) toast("Atenção: " + afetadas.map(key).join(", ") + " depende de " + key(id) + ", que foi reaberta.");
+    } else if (to === "done") {
+      var liberadas = dependents(id).filter(function (d) { return S.status[d] === "todo" && !isBlocked(d); });
+      if (liberadas.length) toast(key(id) + " feita. Agora pode iniciar: " + liberadas.map(key).join(", ") + ".");
+    }
+    render();
+    return true;
+  }
+
+  /* ---------- Filtros ---------- */
+  var F = { fase: "", area: "", q: "", ready: false, view: "board" };
+  var areaSel = document.getElementById("f-area");
+  Array.from(new Set(ITEMS.map(function (i) { return i.area; }))).forEach(function (a) { var o = document.createElement("option"); o.value = a; o.textContent = a; areaSel.appendChild(o); });
+  document.getElementById("f-fase").addEventListener("change", function (e) { F.fase = e.target.value; render(); });
+  areaSel.addEventListener("change", function (e) { F.area = e.target.value; render(); });
+  document.getElementById("f-q").addEventListener("input", function (e) { F.q = e.target.value; render(); });
+  document.getElementById("f-ready").addEventListener("change", function (e) { F.ready = e.target.checked; render(); });
+  function setView(v) {
+    F.view = v;
+    document.getElementById("view-board").setAttribute("aria-pressed", String(v === "board"));
+    document.getElementById("view-order").setAttribute("aria-pressed", String(v === "order"));
+    document.getElementById("board-view").hidden = v !== "board";
+    document.getElementById("order-view").hidden = v !== "order";
+    render();
+  }
+  document.getElementById("view-board").addEventListener("click", function () { setView("board"); });
+  document.getElementById("view-order").addEventListener("click", function () { setView("order"); });
+
+  function visible(i) {
+    if (F.fase && String(i.fase) !== F.fase) return false;
+    if (F.area && i.area !== F.area) return false;
+    if (F.ready && !(S.status[i.id] === "todo" && !isBlocked(i.id))) return false;
+    if (F.q) {
+      var q = norm(F.q.trim());
+      var hay = norm([key(i.id), i.id, i.titulo, i.hoje, i.proposta, i.area, i.onde].join(" "));
+      if (hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  }
+
+  /* ---------- Cartão ---------- */
+  function cardHTML(i) {
+    var st = S.status[i.id], p = prio(i), pb = pendingBlockers(i.id), bl = blockers(i.id), dp = dependents(i.id);
+    var depBox = "";
+    if (bl.length) {
+      var links = bl.map(function (b) { return '<button type="button" class="lnk" data-open="' + b + '">' + key(b) + '</button> <span>(' + LABEL[S.status[b]].toLowerCase() + ')</span>'; }).join(" · ");
+      if (pb.length && st === "todo") depBox = '<div class="dep blk"><b>🔒 Bloqueada.</b><span>Depende de: ' + links + '</span></div>';
+      else if (pb.length) depBox = '<div class="dep warn"><b>⚠ Dependência reaberta.</b><span>Depende de: ' + links + '</span></div>';
+      else depBox = '<div class="dep ok"><b>✓ Dependências feitas.</b><span>' + links + '</span></div>';
+    }
+    var blq = dp.length ? '<div class="bloqueia">Libera: ' + dp.map(key).join(", ") + '</div>' : "";
+    var btns = "";
+    if (st === "todo") btns = '<button type="button" class="btn small primary" data-move="doing"' + (pb.length ? ' disabled title="Bloqueada por dependência"' : "") + '>Iniciar</button>';
+    else if (st === "doing") btns = '<button type="button" class="btn small" data-move="todo">Voltar</button><button type="button" class="btn small primary" data-move="done">Concluir</button>';
+    else btns = '<button type="button" class="btn small" data-move="doing">Reabrir</button>';
+    return '<div class="row1"><button type="button" class="key" data-open="' + i.id + '">' + key(i.id) + '<small>' + i.id + '</small></button>' +
+      '<span class="prio ' + p[0] + '" title="Prioridade ' + p[2] + '"><b>' + p[1] + '</b>' + p[2] + '</span></div>' +
+      '<button type="button" class="title" data-open="' + i.id + '">' + esc(i.titulo) + '</button>' +
+      '<div class="chips"><span class="chip epic">' + FASES[i.fase] + '</span><span class="chip">' + esc(i.area) + '</span><span class="chip">Esforço ' + i.esforco.toLowerCase() + '</span></div>' +
+      depBox + blq +
+      '<div class="foot"><div class="btns">' + btns + '</div></div>';
+  }
+
+  /* ---------- Quadro ---------- */
+  var boardEl = document.getElementById("board");
+  function renderBoard() {
+    boardEl.innerHTML = "";
+    COLS.forEach(function (c) {
+      var list = ITEMS.filter(function (i) { return S.status[i.id] === c[0] && visible(i); })
+        .sort(function (a, b) { return (isBlocked(a.id) - isBlocked(b.id)) || (a.fase - b.fase) || (wave(a.id) - wave(b.id)) || a.id.localeCompare(b.id); });
+      var col = document.createElement("div");
+      col.className = "col"; col.dataset.col = c[0];
+      col.innerHTML = '<div class="col-head"><h3><i style="background:' + c[2] + '"></i>' + c[1] + '</h3><span class="cnt">' + list.length + '</span></div>';
+      var cards = document.createElement("div"); cards.className = "cards";
+      if (!list.length) cards.innerHTML = '<div class="empty">Nenhuma tarefa aqui' + (F.fase || F.area || F.q || F.ready ? " com esses filtros" : "") + '.</div>';
+      list.forEach(function (i) {
+        var el = document.createElement("article");
+        var cls = "card";
+        if (S.status[i.id] === "todo" && isBlocked(i.id)) cls += " is-blocked";
+        else if (S.status[i.id] === "todo" && blockers(i.id).length) cls += " is-ready";
+        el.className = cls; el.draggable = true; el.dataset.id = i.id;
+        el.setAttribute("aria-label", key(i.id) + ": " + i.titulo);
+        el.innerHTML = cardHTML(i);
+        el.addEventListener("dragstart", function (e) { el.classList.add("dragging"); e.dataTransfer.setData("text/plain", i.id); e.dataTransfer.effectAllowed = "move"; });
+        el.addEventListener("dragend", function () { el.classList.remove("dragging"); });
+        cards.appendChild(el);
+      });
+      col.appendChild(cards);
+      col.addEventListener("dragover", function (e) { e.preventDefault(); col.classList.add("over"); });
+      col.addEventListener("dragleave", function (e) { if (!col.contains(e.relatedTarget)) col.classList.remove("over"); });
+      col.addEventListener("drop", function (e) { e.preventDefault(); col.classList.remove("over"); var id = e.dataTransfer.getData("text/plain"); if (BY[id]) move(id, c[0]); });
+      boardEl.appendChild(col);
+    });
+  }
+  boardEl.addEventListener("click", function (e) {
+    var m = e.target.closest("[data-move]");
+    if (m) { var card = m.closest(".card"); move(card.dataset.id, m.dataset.move); return; }
+    var o = e.target.closest("[data-open]");
+    if (o) openDetail(o.dataset.open);
+  });
+
+  /* ---------- Ordem de execução ---------- */
+  var wavesEl = document.getElementById("waves");
+  function renderOrder() {
+    wavesEl.innerHTML = "";
+    var max = 0; ITEMS.forEach(function (i) { max = Math.max(max, wave(i.id)); });
+    var DESC = { 1: "Não dependem de nada. Podem começar já.", 2: "Começam quando as tarefas indicadas da etapa 1 estiverem feitas.", 3: "Começam quando as tarefas indicadas da etapa 2 estiverem feitas." };
+    for (var w = 1; w <= max; w++) {
+      var list = ITEMS.filter(function (i) { return wave(i.id) === w && visible(i); }).sort(function (a, b) { return (a.fase - b.fase) || a.id.localeCompare(b.id); });
+      if (!list.length) continue;
+      var box = document.createElement("div"); box.className = "wave";
+      var ul = list.map(function (i) {
+        var st = S.status[i.id], blk = st === "todo" && isBlocked(i.id);
+        var after = blockers(i.id).length ? '<span class="after">Depois de ' + blockers(i.id).map(function (b) { return key(b) + (S.status[b] === "done" ? " ✓" : ""); }).join(", ") + '</span>' : "";
+        return '<li><button type="button" class="key" data-open="' + i.id + '">' + key(i.id) + '<small>' + i.id + '</small></button>' +
+          '<span>' + esc(i.titulo) + after + '</span>' +
+          '<span class="st ' + (blk ? "blocked" : st) + '">' + (blk ? "Bloqueada" : LABEL[st]) + '</span></li>';
+      }).join("");
+      box.innerHTML = '<h3>Etapa ' + w + ' <span style="font-weight:500;color:var(--muted);font-size:.85rem">· ' + list.length + (list.length === 1 ? ' tarefa' : ' tarefas') + '</span></h3><p>' + (DESC[w] || "") + '</p><ul>' + ul + '</ul>';
+      wavesEl.appendChild(box);
+    }
+    if (!wavesEl.children.length) wavesEl.innerHTML = '<div class="empty">Nenhuma tarefa com esses filtros.</div>';
+  }
+  wavesEl.addEventListener("click", function (e) { var o = e.target.closest("[data-open]"); if (o) openDetail(o.dataset.open); });
+
+  /* ---------- Resumo ---------- */
+  function renderSummary() {
+    var c = { todo: 0, doing: 0, done: 0 }, blk = 0;
+    ITEMS.forEach(function (i) { c[S.status[i.id]]++; if (S.status[i.id] === "todo" && isBlocked(i.id)) blk++; });
+    var t = ITEMS.length;
+    document.getElementById("prog-t").textContent = c.done + " de " + t + " feitas (" + Math.round(c.done / t * 100) + "%)";
+    document.getElementById("bar-d").style.width = (c.done / t * 100) + "%";
+    document.getElementById("bar-p").style.width = (c.doing / t * 100) + "%";
+    document.getElementById("n-todo").textContent = c.todo;
+    document.getElementById("n-doing").textContent = c.doing;
+    document.getElementById("n-done").textContent = c.done;
+    document.getElementById("n-blocked").textContent = blk;
+    var f = document.getElementById("fases"); f.innerHTML = "";
+    [1, 2, 3].forEach(function (n) {
+      var its = ITEMS.filter(function (i) { return i.fase === n; });
+      var d = its.filter(function (i) { return S.status[i.id] === "done"; }).length, p = its.filter(function (i) { return S.status[i.id] === "doing"; }).length;
+      f.insertAdjacentHTML("beforeend", '<div class="fase-row"><span>Fase ' + n + '</span><div class="bar"><i class="d" style="width:' + (d / its.length * 100) + '%"></i><i class="p" style="width:' + (p / its.length * 100) + '%"></i></div><span>' + d + '/' + its.length + '</span></div>');
+    });
+  }
+
+  function render() { renderSummary(); if (F.view === "board") renderBoard(); else renderOrder(); }
+
+  /* ---------- Detalhe ---------- */
+  var dlg = document.getElementById("dlg"), dlgBody = document.getElementById("dlg-body");
+  function openDetail(id) {
+    var i = BY[id]; if (!i) return;
+    var st = S.status[id], p = prio(i), pb = pendingBlockers(id);
+    var blk = blockers(id).length ? blockers(id).map(function (b) { return '<button type="button" class="lnk" data-open="' + b + '">' + key(b) + '</button> ' + esc(BY[b].titulo) + ' <span class="st ' + S.status[b] + '">' + LABEL[S.status[b]] + '</span>'; }).join("<br>") : "Nenhuma. Pode começar a qualquer momento.";
+    var dep = dependents(id).length ? dependents(id).map(function (d) { return '<button type="button" class="lnk" data-open="' + d + '">' + key(d) + '</button> ' + esc(BY[d].titulo); }).join("<br>") : "Nenhuma.";
+    var hist = (S.hist[id] || []).length ? '<ul class="hist">' + S.hist[id].slice().reverse().map(function (h) { return "<li>" + h.t + " · " + LABEL[h.s] + "</li>"; }).join("") + "</ul>" : '<p class="hist" style="padding:0">Sem mudanças ainda.</p>';
+    var opt = function (v) { var dis = v !== "todo" && pb.length ? " disabled" : ""; return '<option value="' + v + '"' + (st === v ? " selected" : "") + dis + '>' + LABEL[v] + (dis ? " (bloqueada)" : "") + '</option>'; };
+    dlgBody.innerHTML =
+      '<div class="dlg-head"><div><button type="button" class="key">' + key(id) + '<small>' + id + ' · ' + FASES[i.fase] + '</small></button><h2 id="dlg-title">' + esc(i.titulo) + '</h2></div>' +
+      '<button type="button" class="btn small" id="dlg-close" aria-label="Fechar">Fechar</button></div>' +
+      '<div class="meta"><label for="d-status">Status<select id="d-status">' + opt("todo") + opt("doing") + opt("done") + '</select></label></div>' +
+      '<p class="msg" id="d-msg">' + (pb.length ? "Bloqueada: conclua antes " + pb.map(key).join(", ") + "." : "") + '</p>' +
+      '<div class="chips"><span class="chip epic">' + FASES[i.fase] + '</span><span class="chip">' + esc(i.area) + '</span><span class="chip">Prioridade ' + p[2].toLowerCase() + '</span><span class="chip">Esforço ' + i.esforco.toLowerCase() + '</span></div>' +
+      '<div class="sec"><h4>Problema hoje</h4><p>' + esc(i.hoje) + '</p></div>' +
+      '<div class="sec"><h4>Proposta</h4><p>' + esc(i.proposta) + '</p></div>' +
+      '<div class="sec"><h4>Onde</h4><p>' + esc(i.onde) + '</p></div>' +
+      '<div class="sec"><h4>Para o dev</h4><p>' + esc(i.dev) + '</p></div>' +
+      '<div class="sec"><h4>Critério de aceite</h4><p>' + esc(i.aceite) + '</p></div>' +
+      '<div class="sec"><h4>Depende de</h4><p>' + blk + '</p></div>' +
+      '<div class="sec"><h4>Libera</h4><p>' + dep + '</p></div>' +
+      '<div class="sec"><h4>Histórico</h4>' + hist + '</div>' +
+      '<div class="sec"><h4>Referência no relatório</h4><p>' + esc(i.refs) + '</p></div>';
+    document.getElementById("dlg-close").addEventListener("click", function () { dlg.close(); });
+    document.getElementById("d-status").addEventListener("change", function (e) {
+      var ok = move(id, e.target.value);
+      if (!ok) e.target.value = S.status[id];
+      openDetail(id);
+    });
+    if (!dlg.open) dlg.showModal();
+    dlgBody.scrollTop = 0;
+  }
+  dlgBody.addEventListener("click", function (e) { var o = e.target.closest(".lnk[data-open]"); if (o) openDetail(o.dataset.open); });
+  dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+
+  /* ---------- Exportar / importar ---------- */
+  function download(name, text, type) {
+    var blob = new Blob([text], { type: type });
+    var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+  function csvCell(v) { v = String(v == null ? "" : v); return '"' + v.replace(/"/g, '""') + '"'; }
+  document.getElementById("btn-csv").addEventListener("click", function () {
+    var maxB = 0; ITEMS.forEach(function (i) { maxB = Math.max(maxB, blockers(i.id).length); });
+    var head = ["Issue Id", "Summary", "Issue Type", "Status", "Priority", "Labels", "Labels", "Description", "Parent"];
+    for (var k = 0; k < maxB; k++) head.push("Blocked by");
+    var rows = [head.map(csvCell).join(",")];
+    [1, 2, 3].forEach(function (n) {
+      var r = [900 + n, "Melhorias – " + FASES[n], "Epic", "To Do", "Medium", "melhorias-enlace", "fase-" + n, "Agrupa as melhorias da " + FASES[n] + ".", ""];
+      for (var k = 0; k < maxB; k++) r.push("");
+      rows.push(r.map(csvCell).join(","));
+    });
+    ITEMS.forEach(function (i) {
+      var pr = { Alto: "High", "Médio": "Medium", Baixo: "Low" }[i.impacto] || "Medium";
+      var desc = "*" + key(i.id) + " (" + i.id + ")*\n\n*Problema hoje:* " + i.hoje + "\n\n*Proposta:* " + i.proposta + "\n\n*Onde:* " + i.onde +
+        "\n\n*Para o dev:* " + i.dev + "\n\n*Critério de aceite:* " + i.aceite + "\n\n*Relatório:* " + i.refs;
+      var r = [Number(i.id.slice(2)), i.titulo, "Story", JIRA_STATUS[S.status[i.id]], pr, "melhorias-enlace", norm(i.area).replace(/[^a-z0-9]+/g, "-"), desc, 900 + i.fase];
+      var b = blockers(i.id).map(function (x) { return Number(x.slice(2)); });
+      for (var k = 0; k < maxB; k++) r.push(b[k] || "");
+      rows.push(r.map(csvCell).join(","));
+    });
+    download("melhorias-enlace-jira.csv", "﻿" + rows.join("\r\n"), "text/csv;charset=utf-8");
+    toast("CSV gerado: 3 épicos e " + ITEMS.length + " histórias, com as dependências.");
+  });
+  document.getElementById("btn-save").addEventListener("click", function () {
+    download("status-quadro-enlace.json", JSON.stringify({ salvoEm: new Date().toISOString(), status: S.status, hist: S.hist }, null, 2), "application/json");
+  });
+  var fileIn = document.getElementById("file-load");
+  document.getElementById("btn-load").addEventListener("click", function () { fileIn.click(); });
+  fileIn.addEventListener("change", function () {
+    var f = fileIn.files[0]; if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      try {
+        var p = JSON.parse(rd.result);
+        if (!p.status) throw new Error();
+        ITEMS.forEach(function (i) { S.status[i.id] = p.status[i.id] || "todo"; S.hist[i.id] = (p.hist && p.hist[i.id]) || []; });
+        save(); render(); toast("Status carregado do arquivo " + f.name + ".");
+      } catch (e) { toast("Esse arquivo não é um status do quadro. Use o .json gerado em “Salvar status”."); }
+      fileIn.value = "";
+    };
+    rd.readAsText(f);
+  });
+  document.getElementById("btn-reset").addEventListener("click", function () {
+    var b = this;
+    if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Clique de novo para zerar"; setTimeout(function () { b.dataset.confirm = ""; b.textContent = "Zerar"; }, 4000); return; }
+    b.dataset.confirm = ""; b.textContent = "Zerar";
+    S = fresh(); save(); render(); toast("Quadro zerado: todas as tarefas voltaram para A fazer.");
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
