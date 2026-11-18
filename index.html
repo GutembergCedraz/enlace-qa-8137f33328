@@ -190,10 +190,24 @@ dialog { background: var(--surface); }
 .dlg select, .dlg input { background: var(--surface); color: var(--text); }
 .toast { background: #210f1e; color: #fff; }
 :root[data-theme="dark"] .toast { background: #f6eaf1; color: #210f1e; }
+
+/* Faixa de status ao vivo */
+.sync { margin: 16px 0 0; border-radius: 12px; padding: 10px 14px; font-size: .84rem; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; border: 1px solid var(--line); background: var(--surface); color: var(--muted); }
+.sync .sp { flex: 1 1 320px; }
+.sync.edit { border-color: #9fd8d6; }
+.live-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--done); margin-right: 6px; box-shadow: 0 0 0 0 rgba(0,128,127,.5); animation: pulse 1.8s infinite; vertical-align: middle; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0,128,127,.45); } 70% { box-shadow: 0 0 0 8px rgba(0,128,127,0); } 100% { box-shadow: 0 0 0 0 rgba(0,128,127,0); } }
+.codeform { display: flex; gap: 6px; align-items: center; }
+.codeform input { font: inherit; font-size: .84rem; border: 1px solid var(--line); border-radius: 9px; padding: 5px 10px; background: var(--bg); color: var(--text); width: 190px; }
+.code-msg { font-size: .8rem; color: var(--blocked); }
+.code-msg:empty { display: none; }
+.summary { margin-top: 14px; }
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
 </style>
 <script>
 (function(){try{var t=localStorage.getItem("enlace-tema");if(!t){t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","light");}})();
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 
@@ -216,6 +230,7 @@ dialog { background: var(--surface); }
 </header>
 
 <main class="wrap">
+  <div class="sync" id="sync" role="status" aria-live="polite"></div>
   <section class="summary" aria-label="Resumo do andamento">
     <div class="sbox prog">
       <h2 id="prog-t">0 de 25 feitas</h2>
@@ -256,7 +271,7 @@ dialog { background: var(--surface); }
     <ol>
       <li>Use <b>Iniciar</b>, <b>Concluir</b> e <b>Reabrir</b> nos cartões, ou arraste o cartão entre as colunas.</li>
       <li>Tarefa com faixa vermelha está <b>bloqueada</b>: ela só pode ser iniciada quando todas as tarefas de que depende estiverem como <b>Feita</b>. Faixa verde indica que já pode começar.</li>
-      <li>O status fica salvo <b>neste navegador</b>. Para passar para outra pessoa, use <b>Salvar status (.json)</b> e ela usa <b>Carregar status</b>.</li>
+      <li><b>Ao vivo:</b> no link online, o status vem do banco do time e qualquer mudança aparece na hora para quem estiver com o quadro aberto. Para mudar status, clique em <b>Entrar para editar</b> e digite o código de edição; sem o código, o quadro fica só para leitura. O código fica lembrado neste navegador até você clicar em <b>Sair do modo edição</b>.</li>
       <li>Para importar no Jira: <b>Exportar CSV para o Jira</b> → no Jira, <i>Configurações do sistema → Importação externa do sistema → CSV</i>. Mapeie <i>Issue Id</i>, <i>Summary</i>, <i>Issue Type</i>, <i>Status</i>, <i>Priority</i>, <i>Labels</i>, <i>Description</i> e <i>Parent</i>; as colunas <i>Blocked by</i> viram o vínculo “is blocked by”. Os status do arquivo são To Do, In Progress e Done.</li>
     </ol>
   </details>
@@ -525,26 +540,63 @@ dialog { background: var(--surface); }
   var toastEl = document.getElementById("toast"), toastT;
   function toast(m) { toastEl.textContent = m; toastEl.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(function () { toastEl.classList.remove("on"); }, 3800); }
 
+  /* ---------- Status ao vivo (Supabase) ---------- */
+  var SUPABASE_URL = "COLE_AQUI_A_PROJECT_URL";
+  var SUPABASE_KEY = "COLE_AQUI_A_CHAVE_ANON";
+  var CODE_KEY = "enlace-quadro-codigo";
+  var ONLINE = /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(SUPABASE_URL) && SUPABASE_KEY.length > 30 && !!(window.supabase && window.supabase.createClient);
+  var sb = null;
+  try { if (ONLINE) sb = window.supabase.createClient(SUPABASE_URL.replace(/\/$/, ""), SUPABASE_KEY, { auth: { persistSession: false } }); } catch (e) { ONLINE = false; }
+  var LIVE = ONLINE ? "connecting" : "local";
+  var editCode = null; try { editCode = localStorage.getItem(CODE_KEY); } catch (e) {}
+  var canEdit = !ONLINE;
+  var MINE = {}, QUIET_UNTIL = 0;
+  function editable() { return !ONLINE || canEdit; }
+  function fmtTs(iso) { try { return new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); } catch (e) { return iso; } }
+
   /* ---------- Mudar status ---------- */
-  function move(id, to) {
+  function applyMove(id, to, quiet) {
     var from = S.status[id];
-    if (from === to) return true;
+    S.status[id] = to;
+    S.hist[id] = (S.hist[id] || []).concat([{ s: to, t: now() }]);
+    if (!ONLINE) save();
+    if (!quiet) {
+      if (from === "done") {
+        var afetadas = dependents(id).filter(function (d) { return S.status[d] !== "todo"; });
+        if (afetadas.length) toast("Atenção: " + afetadas.map(key).join(", ") + " depende de " + key(id) + ", que foi reaberta.");
+      } else if (to === "done") {
+        var liberadas = dependents(id).filter(function (d) { return S.status[d] === "todo" && !isBlocked(d); });
+        if (liberadas.length) toast(key(id) + " feita. Agora pode iniciar: " + liberadas.map(key).join(", ") + ".");
+      }
+    }
+    render();
+  }
+  function move(id, to, done) {
+    var from = S.status[id];
+    if (from === to) { if (done) done(); return true; }
+    if (!editable()) { toast("Somente leitura. Entre com o código de edição para mudar status."); return false; }
     if (to !== "todo" && isBlocked(id)) {
       var pb = pendingBlockers(id).map(function (b) { return key(b) + " (" + LABEL[S.status[b]].toLowerCase() + ")"; });
       toast(key(id) + " está bloqueada. Conclua antes: " + pb.join(", ") + ".");
       return false;
     }
-    S.status[id] = to;
-    S.hist[id] = (S.hist[id] || []).concat([{ s: to, t: now() }]);
-    save();
-    if (from === "done") {
-      var afetadas = dependents(id).filter(function (d) { return S.status[d] !== "todo"; });
-      if (afetadas.length) toast("Atenção: " + afetadas.map(key).join(", ") + " depende de " + key(id) + ", que foi reaberta.");
-    } else if (to === "done") {
-      var liberadas = dependents(id).filter(function (d) { return S.status[d] === "todo" && !isBlocked(d); });
-      if (liberadas.length) toast(key(id) + " feita. Agora pode iniciar: " + liberadas.map(key).join(", ") + ".");
-    }
-    render();
+    if (!ONLINE) { applyMove(id, to); if (done) done(); return true; }
+    MINE[id] = to;
+    sb.rpc("quadro_set_status", { p_task: id, p_status: to, p_code: editCode }).then(function (res) {
+      var d = res.data;
+      if (res.error || !d || !d.ok) {
+        delete MINE[id];
+        var erro = (d && d.erro) || "";
+        if (erro === "codigo_invalido") { sairEdicao(); toast("O código de edição não vale mais. Entre de novo para editar."); }
+        else if (erro.indexOf("bloqueada:") === 0) toast(key(id) + " está bloqueada. Conclua antes: " + erro.slice(10).split(",").map(key).join(", ") + ".");
+        else if (erro === "muitas_tentativas") toast("Muitas tentativas com código errado. Aguarde alguns minutos.");
+        else toast("Não foi possível salvar agora. Confira a conexão e tente de novo.");
+        render(); if (done) done(); return;
+      }
+      if (S.status[id] !== to) applyMove(id, to);
+      delete MINE[id];
+      if (done) done();
+    }, function () { delete MINE[id]; toast("Não foi possível salvar agora. Confira a conexão e tente de novo."); if (done) done(); });
     return true;
   }
 
@@ -594,6 +646,7 @@ dialog { background: var(--surface); }
     if (st === "todo") btns = '<button type="button" class="btn small primary" data-move="doing"' + (pb.length ? ' disabled title="Bloqueada por dependência"' : "") + '>Iniciar</button>';
     else if (st === "doing") btns = '<button type="button" class="btn small" data-move="todo">Voltar</button><button type="button" class="btn small primary" data-move="done">Concluir</button>';
     else btns = '<button type="button" class="btn small" data-move="doing">Reabrir</button>';
+    if (!editable()) btns = "";
     return '<div class="row1"><button type="button" class="key" data-open="' + i.id + '">' + key(i.id) + '<small>' + i.id + '</small></button>' +
       '<span class="prio ' + p[0] + '" title="Prioridade ' + p[2] + '"><b>' + p[1] + '</b>' + p[2] + '</span></div>' +
       '<button type="button" class="title" data-open="' + i.id + '">' + esc(i.titulo) + '</button>' +
@@ -619,7 +672,7 @@ dialog { background: var(--surface); }
         var cls = "card";
         if (S.status[i.id] === "todo" && isBlocked(i.id)) cls += " is-blocked";
         else if (S.status[i.id] === "todo" && blockers(i.id).length) cls += " is-ready";
-        el.className = cls; el.draggable = true; el.dataset.id = i.id;
+        el.className = cls; el.draggable = editable(); el.dataset.id = i.id;
         el.setAttribute("aria-label", key(i.id) + ": " + i.titulo);
         el.innerHTML = cardHTML(i);
         el.addEventListener("dragstart", function (e) { el.classList.add("dragging"); e.dataTransfer.setData("text/plain", i.id); e.dataTransfer.effectAllowed = "move"; });
@@ -684,7 +737,7 @@ dialog { background: var(--surface); }
     });
   }
 
-  function render() { renderSummary(); if (F.view === "board") renderBoard(); else renderOrder(); }
+  function render() { renderSummary(); if (F.view === "board") renderBoard(); else renderOrder(); updateSync(); }
 
   /* ---------- Detalhe ---------- */
   var dlg = document.getElementById("dlg"), dlgBody = document.getElementById("dlg-body");
@@ -698,7 +751,7 @@ dialog { background: var(--surface); }
     dlgBody.innerHTML =
       '<div class="dlg-head"><div><button type="button" class="key">' + key(id) + '<small>' + id + ' · ' + FASES[i.fase] + '</small></button><h2 id="dlg-title">' + esc(i.titulo) + '</h2></div>' +
       '<button type="button" class="btn small" id="dlg-close" aria-label="Fechar">Fechar</button></div>' +
-      '<div class="meta"><label for="d-status">Status<select id="d-status">' + opt("todo") + opt("doing") + opt("done") + '</select></label></div>' +
+      '<div class="meta"><label for="d-status">Status<select id="d-status"' + (editable() ? '' : ' disabled title="Entre com o código de edição para mudar"') + '>' + opt("todo") + opt("doing") + opt("done") + '</select></label></div>' +
       '<p class="msg" id="d-msg">' + (pb.length ? "Bloqueada: conclua antes " + pb.map(key).join(", ") + "." : "") + '</p>' +
       '<div class="chips"><span class="chip epic">' + FASES[i.fase] + '</span><span class="chip">' + esc(i.area) + '</span><span class="chip">Prioridade ' + p[2].toLowerCase() + '</span><span class="chip">Esforço ' + i.esforco.toLowerCase() + '</span></div>' +
       '<div class="sec"><h4>Problema hoje</h4><p>' + esc(i.hoje) + '</p></div>' +
@@ -712,9 +765,8 @@ dialog { background: var(--surface); }
       '<div class="sec"><h4>Referência no relatório</h4><p>' + esc(i.refs) + '</p></div>';
     document.getElementById("dlg-close").addEventListener("click", function () { dlg.close(); });
     document.getElementById("d-status").addEventListener("change", function (e) {
-      var ok = move(id, e.target.value);
+      var ok = move(id, e.target.value, function () { if (dlg.open) openDetail(id); });
       if (!ok) e.target.value = S.status[id];
-      openDetail(id);
     });
     if (!dlg.open) dlg.showModal();
     dlgBody.scrollTop = 0;
@@ -775,9 +827,111 @@ dialog { background: var(--surface); }
     var b = this;
     if (b.dataset.confirm !== "1") { b.dataset.confirm = "1"; b.textContent = "Clique de novo para zerar"; setTimeout(function () { b.dataset.confirm = ""; b.textContent = "Zerar"; }, 4000); return; }
     b.dataset.confirm = ""; b.textContent = "Zerar";
+    if (ONLINE) {
+      if (!canEdit) { toast("Somente leitura. Entre com o código de edição para zerar."); return; }
+      QUIET_UNTIL = Date.now() + 6000;
+      sb.rpc("quadro_reset", { p_code: editCode }).then(function (res) {
+        if (res.data && res.data.ok) { loadOnline(); toast("Quadro zerado para todo o time."); }
+        else toast("Não foi possível zerar agora.");
+      });
+      return;
+    }
     S = fresh(); save(); render(); toast("Quadro zerado: todas as tarefas voltaram para A fazer.");
   });
 
+  /* ---------- Carregar e ouvir mudanças ao vivo ---------- */
+  function loadOnline() {
+    return Promise.all([
+      sb.from("quadro_status").select("task_id,status,updated_at"),
+      sb.from("quadro_historico").select("task_id,status,changed_at").order("changed_at", { ascending: true }).limit(5000)
+    ]).then(function (r) {
+      if (r[0].error) throw r[0].error;
+      r[0].data.forEach(function (x) { if (BY[x.task_id]) S.status[x.task_id] = x.status; });
+      if (!r[1].error) {
+        ITEMS.forEach(function (i) { S.hist[i.id] = []; });
+        r[1].data.forEach(function (h) { if (BY[h.task_id]) S.hist[h.task_id].push({ s: h.status, t: fmtTs(h.changed_at) }); });
+      }
+      render();
+    });
+  }
+  function startOnline() {
+    ITEMS.forEach(function (i) { S.status[i.id] = "todo"; S.hist[i.id] = []; });
+    ["btn-save", "btn-load"].forEach(function (b) { var el = document.getElementById(b); if (el) el.hidden = true; });
+    loadOnline().then(function () {
+      if (!editCode) return;
+      return sb.rpc("quadro_check_code", { p_code: editCode }).then(function (res) {
+        canEdit = !!(res.data && res.data.ok);
+        if (!canEdit) sairEdicao(); else render();
+      });
+    }).catch(function () { LIVE = "error"; render(); });
+    sb.channel("quadro-status")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "quadro_status" }, function (p) {
+        var r = p.new; if (!r || !BY[r.task_id]) return;
+        if (S.status[r.task_id] === r.status) { delete MINE[r.task_id]; return; }
+        if (MINE[r.task_id] === r.status) { delete MINE[r.task_id]; applyMove(r.task_id, r.status); return; }
+        applyMove(r.task_id, r.status, true);
+        if (Date.now() > QUIET_UNTIL) toast("Atualizado agora por outra pessoa: " + key(r.task_id) + " → " + LABEL[r.status] + ".");
+      })
+      .subscribe(function (status) {
+        var was = LIVE;
+        LIVE = status === "SUBSCRIBED" ? "live" : ((status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") ? "error" : "connecting");
+        if (LIVE === "live" && was === "error") loadOnline().catch(function () {});
+        updateSync();
+      });
+    document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") loadOnline().catch(function () {}); });
+  }
+  function sairEdicao() { canEdit = false; editCode = null; try { localStorage.removeItem(CODE_KEY); } catch (e) {} SYNC_SIG = ""; render(); }
+
+  var SYNC_SIG = "";
+  function updateSync() {
+    var el = document.getElementById("sync"); if (!el) return;
+    var sig = [ONLINE, LIVE, canEdit].join("|");
+    if (sig === SYNC_SIG) return;
+    SYNC_SIG = sig;
+    var cls = "sync", html;
+    if (!ONLINE) {
+      cls += " local";
+      html = '<span class="sp">Modo local: o status fica salvo só neste navegador.</span>';
+    } else {
+      var st = LIVE === "live" ? '<span class="live-dot" aria-hidden="true"></span><b>Ao vivo</b>' :
+        (LIVE === "connecting" ? "<b>Conectando ao status ao vivo…</b>" : "<b>Sem conexão.</b> Tentando reconectar…");
+      if (canEdit) {
+        cls += " edit";
+        html = '<span class="sp">' + st + ' · você pode editar neste navegador. As mudanças aparecem na hora para todo o time.</span>' +
+          '<button type="button" class="btn small" data-sync="sair">Sair do modo edição</button>';
+      } else {
+        cls += " ro";
+        html = '<span class="sp">' + st + ' · somente leitura. Para mudar status, entre com o código de edição.</span>' +
+          '<form class="codeform" id="code-form"><label for="code-in" class="sr">Código de edição</label>' +
+          '<input id="code-in" type="password" autocomplete="off" placeholder="Código de edição">' +
+          '<button type="submit" class="btn small primary">Entrar para editar</button></form><span class="code-msg" id="code-msg"></span>';
+      }
+    }
+    el.className = cls; el.innerHTML = html;
+  }
+  var syncEl = document.getElementById("sync");
+  syncEl.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-sync]"); if (!b) return;
+    if (b.dataset.sync === "sair") { sairEdicao(); toast("Modo edição desligado neste navegador."); }
+  });
+  syncEl.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var inp = document.getElementById("code-in"), msg = document.getElementById("code-msg");
+    var c = inp.value.trim();
+    if (!c) { msg.textContent = "Digite o código."; return; }
+    msg.textContent = "Conferindo…";
+    sb.rpc("quadro_check_code", { p_code: c }).then(function (res) {
+      if (res.data && res.data.ok) {
+        editCode = c; canEdit = true;
+        try { localStorage.setItem(CODE_KEY, c); } catch (err) {}
+        SYNC_SIG = ""; render(); toast("Modo edição ativado neste navegador.");
+      } else if (res.data && res.data.erro === "muitas_tentativas") msg.textContent = "Muitas tentativas erradas. Aguarde alguns minutos.";
+      else if (res.error) msg.textContent = "Não foi possível conferir agora. Tente de novo.";
+      else msg.textContent = "Código incorreto.";
+    });
+  });
+
+  if (ONLINE) startOnline();
   render();
 })();
 </script>
