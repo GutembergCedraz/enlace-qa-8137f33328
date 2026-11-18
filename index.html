@@ -207,7 +207,7 @@ dialog { background: var(--surface); }
 <script>
 (function(){try{var t=localStorage.getItem("enlace-tema");if(!t){t=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","light");}})();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js"></script>
 </head>
 <body>
 
@@ -541,8 +541,8 @@ dialog { background: var(--surface); }
   function toast(m) { toastEl.textContent = m; toastEl.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(function () { toastEl.classList.remove("on"); }, 3800); }
 
   /* ---------- Status ao vivo (Supabase) ---------- */
-  var SUPABASE_URL = "COLE_AQUI_A_PROJECT_URL";
-  var SUPABASE_KEY = "COLE_AQUI_A_CHAVE_ANON";
+  var SUPABASE_URL = "https://nhzkmphpagiuajjizhuo.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_1V1hj4nnKv59aBErcShjvA_1dfmNHtp";
   var CODE_KEY = "enlace-quadro-codigo";
   var ONLINE = /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/.test(SUPABASE_URL) && SUPABASE_KEY.length > 30 && !!(window.supabase && window.supabase.createClient);
   var sb = null;
